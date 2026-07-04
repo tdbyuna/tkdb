@@ -303,7 +303,7 @@ function computeScores(){
     add(hgu&&hcu&&hcs, 0.3, 'Guard + Charge Up + Charged Strike');
     add(acts.indexOf('Unleash Fury')>=0 && !hfur, -0.2, 'Unleash Fury without Furious');
     add(hfur && acts.indexOf('Unleash Fury')<0, -0.2, 'Furious without Unleash Fury');
-    add(P==='Auto Charge' && hcs, 0.1, 'Auto Charge + Charged Strike');
+    add(P==='Auto Charge Up' && hcs, 0.1, 'Auto Charge Up + Charged Strike');
     add(P==='Auto Fury' && acts.filter(a=>a==='Furious Strike Two').length===1, 0.1, 'Auto Fury + Furious Two');
     add(hca && P!=='Auto Curse', -0.1, 'Curse skill, no Auto Curse');
     const activeScore = Math.max(0, Math.min(4, base+adj));
@@ -336,7 +336,7 @@ function segSet(sel,btn){ document.querySelectorAll(sel+' button').forEach(b=>b.
 function buildControls(){
   const el=document.getElementById('counts');
   const cChar=new Set(CARDS.map(c=>c.character)).size;
-  el.innerHTML=[[CARDS.length,'SSR cards'],[cChar,'Characters'],[houses.length,'Houses'],['1–5','Tiers']]
+  el.innerHTML=[[CARDS.length,'SSR cards'],[cChar,'Characters'],[houses.length,'Houses'],['S–D','Tiers']]
     .map(([n,l])=>`<div class="k"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join('');
 
   const hs=document.getElementById('house');
@@ -368,7 +368,7 @@ function modelPanel(){
     <div class="mrow"><span class="mk">active</span> = clamp( Σ active-skill points + synergy adjust, 0, 4 )</div>
     <div class="mrow"><span class="mk">passive</span> = the passive skill's points</div>
     <div class="mrow adj"><span class="mk">synergy adjust</span> — +0.1 two strong hits · +0.2 four damaging skills · +0.2 Stun Entry+Time Strike · +0.3 Guard+Charge Up+Charged Strike · −0.1 Curse without Auto Curse · −0.2 Furious/Unleash Fury mismatch · −0.1 lone Final Stand / Desperate Strike</div>
-    <div class="mrow tierline"><span class="mk">Tier 1–5</span> = quintile by Total across all cards (1 = top 20%). Points come from your rubric of ${Object.keys(AP).length} active and ${Object.keys(PP).length} passive skills.</div>
+    <div class="mrow tierline"><span class="mk">Tier S–D</span> = quintile by Total across all cards (S = top 20%). Points come from your rubric of ${Object.keys(AP).length} active and ${Object.keys(PP).length} passive skills.</div>
   </div>`;
 }
 
@@ -397,7 +397,7 @@ function cardHTML(c){
   const tier=c._tier, bar=Math.max(4,Math.round(c._total/MAXTOTAL*100));
   return `<div class="card" tabindex="0" data-id="${enc(c.full_name)}">
     <div class="imgwrap"><img loading="lazy" src="${c.image}" alt="${c.full_name}">
-      <div class="rankbadge"><span class="tier ${tierClass(tier)}">${tier}</span><span class="rnum">#${c._rank}</span></div>
+      <div class="rankbadge"><span class="tier ${tierClass(tier)}">${tierClass(tier)}</span><span class="rnum">#${c._rank}</span></div>
       <div class="chips"><span class="dot ${c.card_type}"></span><span class="stype-pill">${c.skill_type.replace(' Attacker','.ATK').replace('P.','P').replace('S.','S')}</span></div>
     </div>
     <div class="cinfo">
@@ -412,7 +412,7 @@ function render(){
   const list=filtered(), grid=document.getElementById('grid');
   document.getElementById('showN').textContent=list.length;
   document.getElementById('totN').textContent=CARDS.length;
-  document.getElementById('sortLbl').innerHTML=`Total = speed + active + passive · <span style="color:var(--gold)">Tier 1–5 = quintile</span>`;
+  document.getElementById('sortLbl').innerHTML=`Total = speed + active + passive · <span style="color:var(--gold)">Tier S–D = quintile</span>`;
   if(!list.length){ grid.innerHTML=`<div class="empty"><b>No matching cards</b>Try adjusting the filters or search.</div>`; return; }
   grid.innerHTML=list.map(cardHTML).join('');
   grid.querySelectorAll('.card').forEach(el=>{
@@ -469,7 +469,7 @@ function openCard(id){
    <div class="mtop">
      <div class="mimg"><img src="${c.image}" alt="${c.full_name}"></div>
      <div class="mhead">
-       <span class="mrar">◆ ${c.rarity} · TIER ${tier}</span>
+       <span class="mrar">◆ ${c.rarity} · TIER ${tierClass(tier)}</span>
        <div class="mchar">${c.character}</div>
        <h2 class="mname">${c.card_name}</h2>
        <div class="mmeta">
@@ -482,7 +482,7 @@ function openCard(id){
    </div>
    <div class="mbody">
      <div class="total-badge">
-       <div class="big-tier tier ${tierClass(tier)}">${tier}</div>
+       <div class="big-tier tier ${tierClass(tier)}">${tierClass(tier)}</div>
        <div class="tinfo"><div class="tl">Total score</div><div class="tv">${c._total.toFixed(2)}</div></div>
        <div class="trank"><div class="tl">Overall rank</div><div class="tv">#${c._rank}<small> / ${CARDS.length}</small></div></div>
      </div>
@@ -520,7 +520,7 @@ function openCard(id){
        <div class="method">
          <b>Total</b> = active + passive + speed.<br>
          active = clamp( Σ active-skill points + synergy adjust, 0, 4 ) · passive = passive points · speed = (Speed−${MINSP})/(${MAXSP}−${MINSP}).<br>
-         <b>Tier</b> = quintile of Total across all ${CARDS.length} cards (1 = top 20%). Points and skill values come from your own rubric.
+         <b>Tier</b> = quintile of Total across all ${CARDS.length} cards (S = top 20%). Points and skill values come from your own rubric.
        </div>
      </div>
    </div>`;
