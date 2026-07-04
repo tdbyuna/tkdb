@@ -89,6 +89,14 @@ select.sel{background:var(--panel);border:1px solid var(--line2);border-radius:1
 .cbtn.cancel:hover{color:var(--ink);border-color:var(--line)}
 .cbtn.ok{background:var(--red);border-color:var(--red);color:var(--on);font-weight:700}
 .cbtn.ok:hover{filter:brightness(1.08)}
+.simgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px;margin-top:6px}
+.simcard{position:relative;border:1px solid var(--line2);padding:0;background:var(--bg2);border-radius:9px;overflow:hidden;cursor:pointer;aspect-ratio:3/4;transition:.15s}
+.simcard:hover{transform:translateY(-3px);border-color:var(--gold-dim);box-shadow:0 10px 22px -12px rgba(233,167,180,.55)}
+.simcard img{width:100%;height:100%;object-fit:cover;display:block}
+.simcard .noimg{border-radius:0}
+.simcard .noimg em{font-size:11px}.simcard .noimg span{font-size:8px}
+.simrank{position:absolute;bottom:0;left:0;right:0;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--ink);background:linear-gradient(transparent,rgba(20,13,26,.92));padding:10px 3px 3px;text-align:center}
+.simtier{position:absolute;top:4px;left:4px;width:18px;height:18px;font-size:9px;display:flex;align-items:center;justify-content:center;border-radius:5px}
 .owntoggle .dia{width:18px;height:18px}
 .owntoggle .dia path{fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
 .owntoggle.on .dia path{fill:currentColor}
@@ -478,6 +486,29 @@ function render(){
 }
 const enc=s=>encodeURIComponent(s), dec=s=>decodeURIComponent(s);
 
+/* ---------- similar cards (by active/passive skill names) ---------- */
+function baseSkill(n){ return (n||'').replace(/\s*\((A|B|C)\)\s*$/,'').replace(/\s+(Two|All)$/,'').trim(); }
+function skillMatch(a,b){
+  const exA={},exB={},baA={},baB={};
+  (a.actives||[]).forEach(x=>{exA[x]=(exA[x]||0)+1; const k=baseSkill(x); baA[k]=(baA[k]||0)+1;});
+  (b.actives||[]).forEach(x=>{exB[x]=(exB[x]||0)+1; const k=baseSkill(x); baB[k]=(baB[k]||0)+1;});
+  let ident=0,sim=0;
+  for(const k in exA) ident+=Math.min(exA[k],exB[k]||0);      // identical = exact name
+  for(const k in baA) sim+=Math.min(baA[k],baB[k]||0);        // similar = same base (incl. variants)
+  if(a.passive && b.passive){
+    if(a.passive===b.passive){ ident++; sim++; }
+    else if(baseSkill(a.passive)===baseSkill(b.passive)) sim++;
+  }
+  return {ident,sim};
+}
+function similarCards(c,max=12){
+  return CARDS.filter(x=>x.full_name!==c.full_name)
+    .map(x=>{const m=skillMatch(c,x); return {x,ident:m.ident,sim:m.sim};})
+    .filter(o=>o.ident>=3 || o.sim>=4)                        // threshold
+    .sort((p,q)=> q.ident-p.ident || q.sim-p.sim || p.x.rank-q.x.rank)
+    .slice(0,max).map(o=>o.x);
+}
+
 /* ---------- detail modal ---------- */
 function chip(cls,label,val){ return `<span class="st ${cls}">${label} <b>${val}</b></span>`; }
 
@@ -542,9 +573,15 @@ function openCard(id){
        <div class="skill uniq"><div class="sk-top"><div class="sk-name">${uq.name}</div></div>
          ${uq.desc?`<div class="sk-desc">${uq.desc}</div>`:''}</div>
      </div>`:''}
+
+     ${(()=>{const sims=similarCards(c); return sims.length?`<div class="sec">
+       <h4>Similar cards <span class="cnt">${sims.length}</span></h4>
+       <div class="simgrid">${sims.map(s=>`<button class="simcard" data-id="${enc(s.full_name)}" title="${s.character} — ${s.card_name}">${s.image?`<img loading="lazy" src="${s.image}" alt="${s.full_name}">`:`<div class="noimg ${s.card_type}"><span>${s.character}</span><em>${s.card_name}</em></div>`}<span class="simtier tier ${s.tier}">${s.tier}</span></button>`).join('')}</div>
+     </div>`:'';})()}
    </div>`;
   document.getElementById('overlay').classList.add('open');
   document.body.style.overflow='hidden';
+  modal.querySelectorAll('.simcard').forEach(el=>el.onclick=()=>openCard(dec(el.dataset.id)));
 }
 function closeCard(){ document.getElementById('overlay').classList.remove('open'); document.body.style.overflow=''; }
 document.getElementById('overlay').onclick=e=>{ if(e.target.id==='overlay') closeCard(); };
